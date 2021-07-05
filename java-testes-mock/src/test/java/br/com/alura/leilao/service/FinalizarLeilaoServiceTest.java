@@ -17,15 +17,15 @@ import br.com.alura.leilao.model.Leilao;
 import br.com.alura.leilao.model.Usuario;
 
 class FinalizarLeilaoServiceTest {
-	
+
 	private FinalizarLeilaoService service;
-	
+
 	@Mock
 	private LeilaoDao leilaoDao;
-	
+
 	@Mock
 	private EnviadorDeEmails enviadorDeEmails;
-	
+
 	@BeforeEach
 	public void beforeEach() {
 		MockitoAnnotations.initMocks(this);
@@ -35,53 +35,63 @@ class FinalizarLeilaoServiceTest {
 	@Test
 	void deveriaFinalizarUmLeilao() {
 		List<Leilao> leiloes = leiloes();
-		
-		Mockito.when(leilaoDao.buscarLeiloesExpirados())
-		.thenReturn(leiloes);
-		
+
+		Mockito.when(leilaoDao.buscarLeiloesExpirados()).thenReturn(leiloes);
+
 		service.finalizarLeiloesExpirados();
-		
+
 		Leilao leilao = leiloes.get(0);
 		Assert.assertTrue(leilao.isFechado());
-		Assert.assertEquals(new BigDecimal("900"), 
-				leilao.getLanceVencedor().getValor());
-		
+		Assert.assertEquals(new BigDecimal("900"), leilao.getLanceVencedor().getValor());
+
 		Mockito.verify(leilaoDao).salvar(leilao);
 	}
-	
+
 	@Test
-	void deveriaEnviarEmailParaVendedorDoLeilao() {
+	void deveriaEnviarEmailParaVencedorDoLeilao() {
 		List<Leilao> leiloes = leiloes();
-		
-		Mockito.when(leilaoDao.buscarLeiloesExpirados())
-		.thenReturn(leiloes);
-		
+
+		Mockito.when(leilaoDao.buscarLeiloesExpirados()).thenReturn(leiloes);
+
 		service.finalizarLeiloesExpirados();
-		
+
 		Leilao leilao = leiloes.get(0);
 		Lance lanceVendedor = leilao.getLanceVencedor();
-		
-		Mockito.verify(enviadorDeEmails)
-		.enviarEmailVencedorLeilao(lanceVendedor);
+
+		Mockito.verify(enviadorDeEmails).enviarEmailVencedorLeilao(lanceVendedor);
 	}
-	
+
+	@Test
+	void naoDeveriaEnviarEmailParaVencedorDoLeilaoEmCasoDeErroAoEncerrarOLeilao() {
+		List<Leilao> leiloes = leiloes();
+
+		Mockito.when(leilaoDao.buscarLeiloesExpirados()).thenReturn(leiloes);
+
+		Mockito.when(leilaoDao.salvar(Mockito.any())).thenThrow(RuntimeException.class);
+
+		try {
+			service.finalizarLeiloesExpirados();
+			Mockito.verifyNoInteractions(enviadorDeEmails);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+
+	}
+
 	private List<Leilao> leiloes() {
 		List<Leilao> lista = new ArrayList<>();
-		
-		Leilao leilao = new Leilao("Celular", 
-				new BigDecimal("500"), 
-				new Usuario("Fulano"));
-		
-		Lance primeiro = new Lance(new Usuario("Beltrano"), 
-				new BigDecimal("600"));
-		Lance segundo = new Lance(new Usuario("Ciclano"), 
-				new BigDecimal("900"));
-		
+
+		Leilao leilao = new Leilao("Celular", new BigDecimal("500"), new Usuario("Fulano"));
+
+		Lance primeiro = new Lance(new Usuario("Beltrano"), new BigDecimal("600"));
+		Lance segundo = new Lance(new Usuario("Ciclano"), new BigDecimal("900"));
+
 		leilao.propoe(primeiro);
 		leilao.propoe(segundo);
-		
+
 		lista.add(leilao);
-		
+
 		return lista;
 	}
 
